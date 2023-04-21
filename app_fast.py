@@ -25,6 +25,11 @@ async def read_id(item_id: int):
     copy_Recognize_face_image.compare_faces(item_id)
     return {"item_id": item_id}
 '''
+
+@app.post("/")
+async def read_id():
+    return {"hello"}
+
 @app.get("/myname")
 async def read_id(name: str):
     print(name)
