@@ -1,78 +1,97 @@
-from fastapi import FastAPI
-import uvicorn
-from fastapi import FastAPI, Request, status, File, Form, UploadFile, Response
-from fastapi.encoders import jsonable_encoder
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+import tensorflow as tf
+import tensorflow_hub as hub
+import tensorflow_text as text
+import pandas as pd
+import numpy as np
 
-app = FastAPI()
-origins = ["*"]
+import os
+from io import StringIO
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+import re
+import string
 
-'''
-@app.get("/items/{item_id}")
-async def read_id(item_id: int):
-    print(item_id)
-    import copy_Recognize_face_image
-    copy_Recognize_face_image.compare_faces(item_id)
-    return {"item_id": item_id}
-'''
+from flask import (Flask, redirect, render_template, request,
+                   send_from_directory,Response, url_for)
 
-@app.post("/")
-async def read_id():
-    return {"hello"}
+app = Flask(__name__)
 
-@app.get("/myname")
-async def read_id(name: str):
-    print(name)
-    return {"name": name}
+preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
+LoadModel_TF02 = tf.keras.models.load_model('TFModel02.h5', compile=False, custom_objects={'KerasLayer':preprocessor})
 
-@app.post('/get_info/')
-async def read_image(file: UploadFile = File(...), item_id: int = Form(...)):
-    contents = await file.read()
-    print(type(contents))
-    #print(item_id)
-    # print(file)
-    import cv2
-    import numpy as np
-    decoded_image = cv2.imdecode(np.frombuffer(contents, np.uint8), -1)
-    print(type(decoded_image))
-    from Recognize_face_image import compare_faces
-    result, execution = compare_faces(item_id, decoded_image)
-    execution = str(round(execution, 2))
-    print(result)
-    print(execution+'s')
-    return {'Result': result, 'executionTime': execution + 's'}
+Lab = {0: 'Bank Charges and Fees', 1: 'Groceries', 2: 'Transport and Fuel', 3: 'Cellphone',
+       4: 'Restaurants and Take-Aways', 5: 'Entertainment', 6: 'Internet and Telephone', 7: 'Holidays and Travel',
+       8: 'Clothing', 9:'Gambling'}
 
-@app.post('/predict_Category/')
-async def read_csv(file: UploadFile = File(...), item_id: int = Form(...)):
-    contents = await file.read()
-    print(type(contents))
+list_10cat = ['Bank Charges and Fees', 'Groceries', 'Transport and Fuel', 'Cellphone', 'Restaurants and Take-Aways', 
+              'Entertainment', 'Internet and Telephone', 'Holidays and Travel', 'Clothing', 'Gambling']
+
+def semi_clean(text):
+    final_string = ""
+    text = text.lower()
+    text = re.sub(r'\n', '', text)
+    translator = str.maketrans('.', ' ')
+    text = text.translate(translator)
+    translator = str.maketrans('', '', string.punctuation)
+    text = text.translate(translator)
+    final_string = text
+    return final_string
+def predict(model, data):
+    pred =  model.predict(data)
+    return list(map(lambda x: (Lab[x.argmax()], x.max()), pred))
+def get_categories(data):
+    pred_data = pd.DataFrame(np.array(predict(LoadModel_TF02, data)))
+    pred_data.columns = ["Prediction Category", "Prediction Probability"]
+    return pred_data
+
+@app.route('/')
+def index():
+   print('Request for index page received')
+   return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+@app.route('/classifyresult', methods=['POST'])
+def classify():
+   file = request.files['file']
+
+   if file:
+       file_content = file.read()
+
+       #TODO: Classify Content and return Result Content as CSV FIle
+       df = pd.read_csv(file_content) #file.file
+       #file.file.close()
+    
+       df['Description_New'] = df['Description'].apply(lambda x: semi_clean(x))
+       df["Combo"] = np.where((df["Reference"].notnull()) & (df["Description"] != df["Reference"]) & (df["Reference"].str.isnumeric() == False), df["Description"] + ' ' + df["Reference"], df["Description"])
+       df.drop(columns=['Description','Reference'], axis=1, inplace = True)
+       df.rename(columns={'Combo':'Description'}, inplace=True)
+       df = df.loc[df["CategoryDescription"].isin(list_10cat)]
+       
+       data = df["Description_New"]
+       pred_val = get_categories(data)
+       #print(pred_val)
+       
+       Pred_Data = pd.concat([df,pred_val], axis = 1)
+       Pred_Data = Pred_Data.drop(Pred_Data.columns[0],axis=1)
+       #print(Pred_Data)
+       s = StringIO()
+       Pred_Data.to_csv(s, index=False)
+
+       #response = StreamingResponse(iter([s.getvalue()]),
+       #                        media_type="text/csv")
+       
+       #response.headers["Content-Disposition"] = "attachment; filename=result.csv"
 
 
-    #print(item_id)
-    print(file)
-    return {'Result': contents, 'executionTime': 'executionTime'}
-
-    #import cv2
-    #import numpy as np
-    #decoded_image = cv2.imdecode(np.frombuffer(contents, np.uint8), -1)
-    #print(type(decoded_image))
-    #from Recognize_face_image import compare_faces
-    #result, execution = compare_faces(item_id, decoded_image)
-    #execution = str(round(execution, 2))
-    #print(result)
-    #print(execution+'s')
-    #return {'Result': result, 'executionTime': execution + 's'}
+       print('Request for classification received as file name=%s' % file.filename)
+       return Response(file_content,mimetype='text/csv')
+   else:
+       print('Request for classification received without file -- redirecting')
+       return redirect(url_for('index'))
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, port=8000, host="0.0.0.0")
+   app.run()
