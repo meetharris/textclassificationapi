@@ -15,9 +15,6 @@ from flask import (Flask, redirect, render_template, request,
 
 app = Flask(__name__)
 
-preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
-LoadModel_TF02 = tf.keras.models.load_model('azureml://locations/centralindia/workspaces/d40c591a-a486-4c85-aa2c-e6ded75203de/models/TFModel02/versions/1', compile=False, custom_objects={'KerasLayer':preprocessor})
-
 Lab = {0: 'Bank Charges and Fees', 1: 'Groceries', 2: 'Transport and Fuel', 3: 'Cellphone',
        4: 'Restaurants and Take-Aways', 5: 'Entertainment', 6: 'Internet and Telephone', 7: 'Holidays and Travel',
        8: 'Clothing', 9:'Gambling'}
@@ -56,31 +53,38 @@ def favicon():
 @app.route('/classifyresult', methods=['POST'])
 def classify():
    file = request.files['file']
-
+   result = ""
    if file:
-
        #TODO: Classify Content and return Result Content as CSV FIle
-       df = pd.read_csv(file)  
+       df = pd.read_csv(file)  # file.file
 
-    
        df['Description_New'] = df['Description'].apply(lambda x: semi_clean(x))
        df["Combo"] = np.where((df["Reference"].notnull()) & (df["Description"] != df["Reference"]) & (df["Reference"].str.isnumeric() == False), df["Description"] + ' ' + df["Reference"], df["Description"])
        df.drop(columns=['Description','Reference'], axis=1, inplace = True)
        df.rename(columns={'Combo':'Description'}, inplace=True)
        df = df.loc[df["CategoryDescription"].isin(list_10cat)]
-       
        data = df["Description_New"]
-       pred_val = get_categories(data)
-       #print(pred_val)
        
-       Pred_Data = pd.concat([df,pred_val], axis = 1)
-       Pred_Data = Pred_Data.drop(Pred_Data.columns[0],axis=1)
-       #print(Pred_Data)
-       s = StringIO()
-       Pred_Data.to_csv(s, index=False)
+       try:
+           preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
+           LoadModel_TF02 = tf.keras.models.load_model('azureml://locations/centralindia/workspaces/d40c591a-a486-4c85-aa2c-e6ded75203de/models/TFModel02/versions/1', compile=False, custom_objects={'KerasLayer':preprocessor})
+           
+           pred_val = get_categories(data)
+           #print(pred_val)
+           
+           Pred_Data = pd.concat([df,pred_val], axis = 1)
+           Pred_Data = Pred_Data.drop(Pred_Data.columns[0],axis=1)
+           #print(Pred_Data)
+           s = StringIO()
+           Pred_Data.to_csv(s, index=False)
 
-       print('Request for classification received as file name=%s' % file.filename)
-       return Response(s.getvalue(),mimetype='text/csv')
+           print('Request for classification received as file name=%s' % file.filename)
+           result = s.getvalue()
+       except Exception as e: # work on python 3.x
+            result = str(e)
+       return Response(result, mimetype='text/csv')
+  
+       
    else:
        print('Request for classification received without file -- redirecting')
        return redirect(url_for('index'))
