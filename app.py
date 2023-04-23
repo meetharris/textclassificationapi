@@ -58,11 +58,10 @@ def classify():
    file = request.files['file']
 
    if file:
-       file_content = file.read()
 
        #TODO: Classify Content and return Result Content as CSV FIle
-       df = pd.read_csv(file_content) #file.file
-       #file.file.close()
+       df = pd.read_csv(file)  # file.file
+
     
        df['Description_New'] = df['Description'].apply(lambda x: semi_clean(x))
        df["Combo"] = np.where((df["Reference"].notnull()) & (df["Description"] != df["Reference"]) & (df["Reference"].str.isnumeric() == False), df["Description"] + ' ' + df["Reference"], df["Description"])
@@ -80,14 +79,8 @@ def classify():
        s = StringIO()
        Pred_Data.to_csv(s, index=False)
 
-       #response = StreamingResponse(iter([s.getvalue()]),
-       #                        media_type="text/csv")
-       
-       #response.headers["Content-Disposition"] = "attachment; filename=result.csv"
-
-
        print('Request for classification received as file name=%s' % file.filename)
-       return Response(file_content,mimetype='text/csv')
+       return Response(s.getvalue(),mimetype='text/csv')
    else:
        print('Request for classification received without file -- redirecting')
        return redirect(url_for('index'))
