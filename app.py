@@ -16,7 +16,7 @@ from flask import (Flask, redirect, render_template, request,
 app = Flask(__name__)
 
 preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
-LoadModel_TF02 = tf.keras.models.load_model('TFModel02.h5', compile=False, custom_objects={'KerasLayer':preprocessor})
+LoadModel_TF02 = tf.keras.models.load_model('azureml://locations/centralindia/workspaces/d40c591a-a486-4c85-aa2c-e6ded75203de/models/TFModel02/versions/1', compile=False, custom_objects={'KerasLayer':preprocessor})
 
 Lab = {0: 'Bank Charges and Fees', 1: 'Groceries', 2: 'Transport and Fuel', 3: 'Cellphone',
        4: 'Restaurants and Take-Aways', 5: 'Entertainment', 6: 'Internet and Telephone', 7: 'Holidays and Travel',
