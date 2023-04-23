@@ -60,7 +60,7 @@ def classify():
    if file:
 
        #TODO: Classify Content and return Result Content as CSV FIle
-       df = pd.read_csv(file)  # file.file
+       df = pd.read_csv(file)  
 
     
        df['Description_New'] = df['Description'].apply(lambda x: semi_clean(x))
