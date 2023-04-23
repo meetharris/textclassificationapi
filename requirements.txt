@@ -5,5 +5,3 @@ tensorflow_hub==0.13.0
 tensorflow_text==2.11.0
 pandas==1.5.2
 numpy==1.23.5
-re==2.2.1
-string
