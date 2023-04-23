@@ -60,4 +60,4 @@ jobs:
         with:
           app-name: 'green-field-c35b549cb3654f2097e6dbd30eda8499'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7E2F78CF024543EAB3E5E2151FDBFB9C }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_34DB0A4B9C49436590473910B1C3CCE1 }}
