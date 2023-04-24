@@ -67,7 +67,7 @@ def classify():
        
        try:
            preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
-           LoadModel_TF02 = tf.keras.models.load_model('azureml://locations/centralindia/workspaces/d40c591a-a486-4c85-aa2c-e6ded75203de/models/TFModel02/versions/1', compile=False, custom_objects={'KerasLayer':preprocessor})
+           LoadModel_TF02 = tf.keras.models.load_model('https://mldevworspace8102427333.file.core.windows.net/code-391ff5ac-6576-460f-ba4d-7e03433c68b6/Users/vaishnavi.parab/Users/vaishnavi.parab/saved_model/TFModel02.h5', compile=False, custom_objects={'KerasLayer':preprocessor})
            
            pred_val = get_categories(data)
            #print(pred_val)
