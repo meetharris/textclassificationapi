@@ -3,7 +3,8 @@ import tensorflow_hub as hub
 import tensorflow_text as text
 import pandas as pd
 import numpy as np
-
+import urllib3.request as urllib
+from flask import (Flask, redirect, render_template, request, send_file, Response, url_for)
 import os
 from io import StringIO
 
@@ -21,6 +22,16 @@ Lab = {0: 'Bank Charges and Fees', 1: 'Groceries', 2: 'Transport and Fuel', 3: '
 
 list_10cat = ['Bank Charges and Fees', 'Groceries', 'Transport and Fuel', 'Cellphone', 'Restaurants and Take-Aways', 
               'Entertainment', 'Internet and Telephone', 'Holidays and Travel', 'Clothing', 'Gambling']
+
+# @app.route('/model', methods=['GET'])
+# def download():
+#     # pth=os.getcwd()
+#     try:
+#         # model = os.path.join(pth, 'static/models/TFModel02.h5')
+#         model = "https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5"
+#         return send_file(model, as_attachment=True)
+#     except Exception as e:
+#         return (str(e))
 
 def semi_clean(text):
     final_string = ""
@@ -67,8 +78,12 @@ def classify():
        
        try:
            preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
-           LoadModel_TF02 = tf.keras.models.load_model('https://mldevworspace8102427333.file.core.windows.net/code-391ff5ac-6576-460f-ba4d-7e03433c68b6/Users/vaishnavi.parab/Users/vaishnavi.parab/saved_model/TFModel02.h5', compile=False, custom_objects={'KerasLayer':preprocessor})
-           
+           #req = urllib.urlopen("https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5")
+           req = urllib.urlopen("https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5")
+           mdl = req.read()
+
+           LoadModel_TF02 = tf.keras.models.load_model(mdl, compile=False, custom_objects={'KerasLayer':preprocessor})
+
            pred_val = get_categories(data)
            #print(pred_val)
            
