@@ -3,11 +3,14 @@ import tensorflow_hub as hub
 import tensorflow_text as text
 import pandas as pd
 import numpy as np
-import urllib3.request as urllib
+# import urllib3.request as urllib
 from flask import (Flask, redirect, render_template, request, send_file, Response, url_for)
 import os
 from io import StringIO
-
+import traceback
+from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
+import datetime
+import timedelta
 import re
 import string
 
@@ -79,8 +82,20 @@ def classify():
        try:
            preprocessor = hub.KerasLayer("universal-sentence-encoder-cmlm_multilingual-preprocess_2")
            #req = urllib.urlopen("https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5")
-           req = urllib.urlopen("https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5")
-           mdl = req.read()
+           # req = urllib.urlopen("https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5")
+           # mdl = req.read()
+
+           sas_token = generate_account_sas(
+               account_name="mldevworspace8102427333",
+               account_key="6ifYiqRSm2JuVkm5SRO7Dm1NK2crQv3R/ynHLdfbwP4uPq58Sw5oeyUphE2klNj2GLHoRYadDcBE+AStOxHEvg==",
+               resource_types=ResourceTypes(service=True),
+               permission=AccountSasPermissions(read=True),
+               expiry=datetime.utcnow() + timedelta(hours=1)
+           )
+
+           mdl = BlobServiceClient(
+               account_url="https://mldevworspace8102427333.blob.core.windows.net/model-container/TFModel02.h5",
+               credential=sas_token)
 
            LoadModel_TF02 = tf.keras.models.load_model(mdl, compile=False, custom_objects={'KerasLayer':preprocessor})
 
@@ -95,8 +110,10 @@ def classify():
 
            print('Request for classification received as file name=%s' % file.filename)
            result = s.getvalue()
-       except Exception as e: # work on python 3.x
-            result = str(e)
+       except:
+           track = traceback.format_exc()
+           return(track)
+
        return Response(result, mimetype='text/csv')
   
        
